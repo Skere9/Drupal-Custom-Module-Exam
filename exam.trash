@@ -1,0 +1,922 @@
+<?php
+
+/*
+ * These are functions and other code snippets that I once created
+ * but no longer use.  For reference purposes and ideas on future
+ * development, I keep these here.
+ */
+
+/**
+ * function exam_theme()
+ * 
+ * Stored in: exam.module
+ * 
+ * Implements hook_theme().
+ * 
+ * The reason I'm including this is to specify that the 
+ * file "exam.tpl.php", which is conveyed by 'template' => 'exam',
+ * will be used by the system to override certain theming
+ * features, as described in exam.tpl.php.  
+ * 
+ * The exam.tpl.php is included in the same
+ * subdirectory as the file containing this code.
+ * 
+ */
+function exam_theme() {
+  return array(
+    'exam' => array(
+      'template' => 'exam',
+      'render element' => 'elements',
+    ),
+  );
+}
+
+/** 
+ *
+ * funciton exam_IDs
+ * 
+ * Store in: exam.module
+ *
+ * Get a list of all exam IDs available.
+ *
+ * I modelled this after exam_types(), which says it 
+ * would usually be more fully featured
+ *
+ * @return array
+ *   An array of exam type objects. 
+ * 
+ */
+function exam_IDs() {
+  $exams = &drupal_static(__FUNCTION__);
+
+  if (empty($exams)) {
+    $exams['1'] = (object)array(
+      'type' => '1',
+      'name' => t('SQL Expert'),
+      'description' => t('This is the SQL Expert description.')
+    );
+    $exams['2'] = (object)array(
+      'type' => '2',
+      'name' => t('Basic HTML'),
+      'description' => t('Some stuff about HTML.')
+    );
+  }  
+  return $exams;
+}
+
+
+/**
+ *  
+ * function exam_initiate()
+ * 
+ * Store in: exam.module
+ * 
+ * Read an exam from the master table (exam) into memory, and
+ * store a copy into the instance table (exam_instance).
+ * This is all to prepare for a student to take the exam.
+ *
+ * @return
+ *   An exam object based on the instance.
+ * 
+ */
+function exam_initiate($exam_id) {
+  
+  // SKERE - IN WORK
+  
+  $exam_id;
+  
+  return $examInstance;
+}
+
+/**
+ * 
+ * function exam_takeOld1
+ * 
+ * Store in: exam.pages.inc
+ *  
+ * KEEP FOR FUTURE USE, IF NOT USED, THEN DISCARD
+ *
+ * This is an initial page for exam_take, it shows an intro 
+ * and the number of questions on the exam.
+ *  
+ * @param $view_mode
+ *   The view mode we want to display.
+ */
+function exam_takeOld1($view_mode = 'full') {
+  $content = '<p>This is the exam.</p>';
+  
+  $result = db_query(
+      'SELECT e.exam_title, count(q.question_id) as tot_q ' .
+      'from exam as e LEFT JOIN question as q ' .
+      'ON e.exam_id = q.exam_id ' .
+      'WHERE e.exam_id = :id ' .
+      'group by e.exam_title'
+      , array(':id' => '1')); // SKERE - Replace 2 with the selected exam_id value    
+  
+  if ($result->rowCount() == 0){
+    $content = $content . '<p>There are no exams stored in the system.</p>';
+  }
+  else { 
+    while ($row = $result->fetchAssoc()) {
+      $content = '<p>Exam Title: ' . $row['exam_title'] . '</p>';
+      if ($row['tot_q'] == '1') {
+        $vQtext = 'question';
+      } else {
+        $vQtext = 'questions';
+      }
+      
+      // Grab the tot_q into a SESSION variable so
+      // the ExamInstance object can limit the db_query_range loop
+      // correctly
+    
+      $content = $content . '<p>This exam consists of ' . $row['tot_q'] . ' ' . $vQtext . '.</p>';
+      $content = $content . '<p>Click to start.</p>';
+    }
+    
+  }
+  
+  return $content;
+} // function exam_takeOld1
+
+
+/* 
+ * function exam_takeOld2
+ * 
+ * Store in: exam.pages.inc
+ * 
+ */
+ 
+function exam_takeOld2($examID = '', $currentQuestionNumber = '1') {
+  //SKERE - TODO LIST
+  //Prepare this function for iterative use
+  //  - ensure the $vExamInstance is only created the first time
+  //  - pass back into this function a value for the question number
+  //  - capture student answers
+  
+  $vExamInstance = new ExamInstance($examID);
+    
+  // Get the array of answers for the current question
+  $vTheAnswers = $vExamInstance->ei_qa[$currentQuestionNumber]['theAnswers'];
+  $vNumberOfAnswers = count($vTheAnswers)-1; // Account for the first initialized blank row
+  
+  // Initialize the text variable collecting the HTML page.
+  // This prevents us from having to figure out which 
+  // line consists of the first assignment to the variable.
+  // In other words, each assignment to this variable that follows
+  // will append to it, instead of initializing it.
+  $content = ''; 
+  
+  //$content = $content . '<p>The instantiated exam is: <b>' .
+  //    $vExamInstance->ei_exam['exam_title'] . '</b></p>';
+  //$content = $content . '<p>And the topics are: <b>' .
+  //    $vExamInstance->ei_topic[1]['topic_title'] . '</b></p>';
+  $content = $content . '<form action="?q=exam/take" method="post">';
+
+  $content = $content . '<input type="hidden" name="" value="">';
+
+  $content = $content . '<p>QUESTION # ' 
+      . $vExamInstance->ei_qa[$currentQuestionNumber]['question_no']
+      . ' of ' . $vExamInstance->ei_exam['totalQuestions']
+      . '</p>';
+  
+   $content = $content . '<p><input type="checkbox" value="Mark">Mark&nbsp;</p>';
+
+   $content = $content . '<p>' . $vExamInstance->ei_qa[$currentQuestionNumber]['question_text'] . '</p>';
+   
+   $content = $content . '<table>';
+   $content = $content . '<tr>';
+   $content = $content . '<td colspan=3><b>Choose from below:</b></td>';
+   $content = $content . '</tr>';
+
+  $counter = 1;
+  while ($counter <= $vNumberOfAnswers) {
+    $content = $content . '<tr>';
+    $content = $content . '<td width=20>' . $vTheAnswers[$counter]['answer_letter'] . '</td>';
+    $content = $content . '<td width=20><input type="radio" name="dt_answer" value="' . '1' . '"></td>';
+    $content = $content . '<td>' . $vTheAnswers[$counter]['answer_text'] . '</td>'; 
+    $content = $content . '</tr>';
+    $counter++;
+  }
+  
+  $content = $content . '</table>';
+  
+  $content = $content . '<input type="submit" name="continue" value="Save and Go To Next Question">&nbsp;';
+  $content = $content . '<input type="submit" name="summary"  value="Save and Show Summary">';
+  $content = $content . '<input type="reset"  name="clear"    value="Clear Answers and Clear Mark">&nbsp;';
+    
+  $content = $content . '</form>';
+
+  //print('<p>');
+  //print_r($vExamInstance->ei_topic);
+  //print('</p>');
+  
+  //$resultQ = db_query(
+  //    'SELECT q.question_id, q.question_text ' .
+  //    'FROM   question as q ' .
+  //    'WHERE  q.exam_id = :eid ' 
+  //    , array(':eid' => $examID)); 
+    
+  //if ($resultQ->rowCount() == 0){
+  //  $content = $content . '<p>There is no such exam stored in the system.</p>';
+  //}
+  //else { 
+  //  while ($row = $resultQ->fetchAssoc()) {
+  //    $content = $content . '<p>Question # 1</p>';
+  //    $content = $content . $row['question_text'] . '</p>';
+  //    $qid = $row['question_id'];
+  //  }
+  //}
+  
+  //$resultA = db_query(
+  //    'SELECT a.answer_id, a.answer_text ' .
+  //    'FROM   answer as a ' .
+  //    'WHERE  a.question_id = :qid ' 
+  //    , array(':qid' => $qid));  // SKERE: Add question_id value here
+    
+  //if ($resultA->rowCount() == 0){
+  //  $content = $content . '<p>There is no such exam stored in the system.</p>';
+  //}
+  //else { 
+  //  $content = $content . '<form action="">';
+  //  //$content = $content . '<ol>';
+  //  $content = $content . '<table>';
+  //  while ($row = $resultA->fetchAssoc()) {
+  //    $content = $content . '<tr>';
+  //    $content = $content . '<td width=20><input type="radio" name="dt_answer" value="' . '1' . '"></td><td>' . 
+  //               $row['answer_text'] . '</td>';
+  //    $content = $content . '</tr>';
+  //  }
+  //  //$content = $content . '</ol>';
+  //  $content = $content . '</table>';
+  //  $content = $content . '<input type="reset" value="Clear">&nbsp;';
+  //  $content = $content . '<input type="checkbox" value="Mark">Mark&nbsp;<br>';
+  //  $content = $content . '<input type="submit" value="Skip">&nbsp;';
+  //  $content = $content . '<input type="submit" value="Save and Continue">&nbsp;';
+  //  $content = $content . '<input type="submit" value="Show Summary">';
+  //  $content = $content . '</form>';
+  //}
+  
+  return $content;
+} // function exam_takeOld2()
+
+/**
+ * function exam_list
+ * 
+ * Store in: exam.pages.inc
+ * 
+ * Display a list of exams for a student to choose from.
+ * 
+ * @param $view_mode
+ *   The view mode we want to display.
+ */
+function exam_list($view_mode = 'full') {
+  
+  $result = db_query(
+    'SELECT   e.exam_id
+            , e.exam_title
+            , count(q.question_id) as tot_q 
+     FROM     exam as e LEFT JOIN question as q
+     ON       e.exam_id = q.exam_id
+     GROUP BY e.exam_id, e.exam_title'); // SKERE - Replace 2 with the selected exam_id value    
+  
+  $content = "<hr/>";
+  
+  foreach ($result as $row){
+    $content = $content . '<p>Exam Title: ' . $row->exam_title . '</p>';
+    if ($row->tot_q == '1') {
+      $vQtext = 'question';
+    } else {
+      $vQtext = 'questions';
+    }
+
+    $content = $content . '<p>This exam consists of ' . $row->tot_q . ' ' . $vQtext . '.</p>';
+    //$row = $result->fetch();
+    
+    $content = $content . '<a href="exam/take/' . $row->exam_id . '"><b>CLICK TO TAKE THE <i>' . $row->exam_title . '</i> EXAM.</b></a>';
+    $content = $content . '<hr/>';
+    
+  }
+  
+  return t($content);
+ 
+} // function exam_list()
+
+/**
+ * 
+ * function exam_list
+ * 
+ * Store in: exam.pages.inc
+ *  
+ * SKERE 
+ * 
+ * This is an alternative to exam_list(), I'm trying to learn how this works
+ * 
+ * Note:  This function assumes that at least one exam has already been
+ * entered into the database. 
+ *
+ * 
+ * @param $view_mode
+ *   The view mode we want to display.
+ */
+function exam_list3($view_mode = 'full') {
+  
+  $item  = menu_get_item();
+  $links = system_admin_menu_block($item);
+
+  //SKERE - START to populate a submenu in case no submenu options exist.
+  //$doit = array();
+  //$items[] = l('Test', 'http://www.databasetraining.com', $doit);
+  //SKERE - END
+  
+  $content = '';
+  
+  $content = $content . '<table>';
+  
+  $content = $content . '<tr>';
+  $content = $content . '<th width=100>Exam</th>';
+  $content = $content . '<th width=180>Description</th>';
+  //$content = $content . '<th># of Questions</th>';
+  $content = $content . '<th>Action</th>';
+  $content = $content . '</tr>';
+  
+  foreach ($links as $link) {
+    
+    $content = $content . '<tr>';
+    $content = $content . '<td><a href="?q=' . $link['href'] . '">' . $link['title'] . '</a></td>';
+    $content = $content . '<td>' . $link['description'] . '</td>';
+    //$content = $content . '<td>' . $link['tot_q'] . '</td>';
+    $content = $content . '<td><a href="?q=' . $link['href'] . '">Initiate the <i>' . $link['title'] . '</i> exam</a></td';
+    $content = $content . '</tr>';
+    
+  }
+  
+  $content = $content . '</table>';
+  
+  return $content;
+  
+  //foreach ($links as $link) {
+  //  $items[] = l($link['title'], $link['href'], $item['localized_options'])
+  //    . ': ' . filter_xss_admin($link['description']);
+  //}
+
+  //return theme('item_list', array('items' => $items));
+ 
+} // function exam_list3()
+
+  // Constructor
+
+
+/**
+ * 
+ * function __constructOLD()
+ * 
+ * Store in: exam.class.inc
+ * 
+ * This was the original constructor for the ExamInstance class.
+ * 
+ * @param $view_mode
+ *   The view mode we want to display.
+ */
+ function __constructOLD($examID) {
+    
+    // DEPRACATED 
+    
+    // ************************************************
+    // * First, Copy row (just one) from exam to exam_instance 
+    // ************************************************
+    
+    // Build the SELECT query for the INSERT statement.
+    $query = db_select('exam', 'e');
+    // Add the fields to be selected
+    // Two things to consider here.  
+    // First, I generally include the primary key of "exam_instance_id" to draw attention
+    // to it, then insert a NULL value into it, demonstrating that this is how MySQL 
+    // increments the primary key.  But I cannot figure out how to use this Drupal database API
+    // to insert a static value of NULL.  So I've omitted it.
+    // Second, and related to the last problem, I can't figure out how to use this INSERT ... SELECT
+    // feature to incorporate variables from this code.  So I can't work in the value for USER_ID
+    // into this insert.  As a workaround, let's ignore it in this statement, but extract
+    // the auto-generated primary key value for "exam_instance_id", then issue an UPDATE immediately
+    // following this INSERT, and use the UPDATE to add the USER_ID value.
+    // Omit any inclusion of "exam_instance_id" and allow the value to be auto-incremented as the primary key
+    $query->addField('e', 'exam_id');          // insert into exam_instance.exam_id
+    $query->addField('e', 'vid');              // insert into exam_instance.vid
+    $query->addField('e', 'type');             // insert into exam_instance.type
+    $query->addField('e', 'exam_title');       // insert into exam_instance.exam_title
+    $query->addField('e', 'exam_description'); // insert into exam_instance.exam_description
+    $query->addField('e', 'status');           // insert into exam_instance.status
+    $query->addExpression(':user_id', 'user_id', array(':user_id' => $user->uid)); // SKERE - Change 77 to variable
+    
+    // Add the SELECT statement's WHERE criteria
+    $query->condition('exam_id', $examID); 
+
+    // Perform the insert into exam_instance
+    $eiid = 
+      db_insert('exam_instance')
+      ->fields(
+         array(
+           'exam_id',
+           'vid',
+           'type',
+           'exam_title',
+           'exam_description',
+           'status',
+           'user_id'))
+     ->from($query)
+     ->execute();    
+  
+   
+    // ************************************************
+    // * Next, copy rows from topic to topic_instance 
+    // ************************************************
+
+    // Build the SELECT query for the INSERT statement.
+    $query = db_select('topic');
+    $query->addField(NULL, 'topic_id');    // insert into exam_instance.topic_id
+    $query->addField(NULL, 'topic_title'); // insert into exam_instance.topic_title
+    $query->addField(NULL, 'vid');         // insert into exam_instance.vid
+    $query->addField(NULL, 'status');      // insert into exam_instance.status
+    $query->addExpression(':eiid', 'exam_instance_id', array(':eiid' => $eiid));
+
+    // Add the SELECT statement's WHERE criteria
+    $query->condition('exam_id', $examID); 
+
+    // Perform the insert into exam_instance
+    $tiid = 
+      db_insert('topic_instance')
+      ->fields(
+         array(
+           'topic_id',
+           'topic_title',
+           'vid',
+           'status',
+           'exam_instance_id'
+           ))
+     ->from($query)
+     ->execute();    
+ 
+    // ************************************************
+    // * Next, get an array of topic_id values 
+    // * We'll use this in the upcoming loop
+    // ************************************************
+    
+    $topic_id_array = array(
+       1=>array(1),
+       2=>array(2),
+       3=>array(3),
+       4=>array(4)
+      );
+    
+    // ************************************************
+    // * Next, copy rows from question to question_instance 
+    // ************************************************
+
+    // Build the SELECT query for the INSERT statement.
+    $query = db_select('question');
+    $query->addField(NULL, 'topic_id');      // insert into exam_instance.topic_id
+    $query->addField(NULL, 'question_id');   // insert into exam_instance.question_id
+    $query->addField(NULL, 'question_text'); // insert into exam_instance.question_title
+    $query->addField(NULL, 'vid');           // insert into exam_instance.vid
+    $query->addField(NULL, 'status');        // insert into exam_instance.status
+    $query->addExpression(':eiid', 'exam_instance_id', array(':eiid' => $eiid));
+    $query->addExpression(':tiid', 'topic_instance_id', array(':tiid' => 88)); // Replace with logic to capture each topic_instance_id value
+
+    // Add the SELECT statement's WHERE criteria
+    $query->condition('exam_id', $examID); 
+
+    // Perform the insert into question_instance
+    $tiid = 
+      db_insert('question_instance')
+      ->fields(
+         array(
+           'topic_id',
+           'question_id',
+           'question_text',
+           'vid',
+           'status',
+           'exam_instance_id',
+           'topic_instance_id'
+           ))
+     ->from($query)
+     ->execute();  
+    
+    // ************************************************
+    // * Finally, copy rows from answer to answer_instance 
+    // ************************************************
+    
+    return null;
+  }  
+  
+
+
+  /* 
+   * function __loadExistingExamObject()
+   * 
+   * Store in: exam.class.inc
+   * 
+   * This function is used only to load
+   * an existing exam that was begun earlier
+   * but not completed before the session
+   * was terminated for whatever reason.
+   * The exam_instance data is already
+   * saved, we're just re-creating the
+   * exam_instance object 
+   * and all associated session variables
+   * to resume the exam
+   */
+  function loadExistingExamObject($pExamInstanceID) {
+    
+    //
+    // Step 1 of 4: Build ei_exam
+    //
+    $resultExam = db_query_range(
+      'SELECT ei.exam_id
+            , ei.exam_title
+            , ei.type
+            , ei.exam_description
+            , ei.totalQuestions
+            , ei.vid
+            , ei.status
+        FROM  exam_instance_id ei
+        WHERE e.exam_id = :eiid',
+        0, 1, array(':eiid' => $pExamInstanceID)
+     );
+
+    foreach ($resultExam as $recordExam) {    
+
+      $this->ei_exam = array(
+          'exam_id'          => $recordExam->exam_id,
+          'exam_title'       => $recordExam->exam_title,
+          'type'             => $recordExam->type,
+          'exam_description' => $recordExam->exam_description,
+          'graded'           => null,
+          'grade'            => null,
+          'totalQuestions'   => $recordExam->totalQuestions,
+          'numberCorrect'    => null,
+          'numberWrong'      => null,
+          'numberUnanswered' => null,
+          'vid'              => $recordExam->vid,
+          'status'           => $recordExam->status,
+        );
+    }    
+
+    //
+    // Step 2 of 4: Build ei_topic
+    //
+    $resultTopic = db_query_range(
+      'SELECT ti.topic_id
+            , ti.topic_title
+            , ti.vid
+            , ti.status
+       FROM   topic_instance_id ti
+       WHERE  ti.exam_instance_id = :eiid',
+       0, 50, array(':eiid' => $pExamInstanceID)
+    );
+
+    foreach ($resultTopic as $recordTopic) {
+
+      array_push($this->ei_topic, 
+          array(  'topic_id'          => $recordTopic->topic_id
+                , 'topic_instance_id' => $tiid
+                , 'exam_instance_id'  => $eiid
+                , 'topic_title'       => $recordTopic->topic_title
+                , 'totalQuestions'    => null
+                , 'numberCorrect'     => null
+                , 'numberWrong'       => null
+                , 'numberUnanswered'  => null            
+               )
+          );       
+
+    }    
+    
+    //
+    // Step 3 of 4: Build ei_answerSet
+    //
+    $resultAnswer = db_query_range(
+        'SELECT ai.answer_id
+              , ai.answer_text
+              , ai.is_correct
+              , ai.rationale
+              , ai.vid
+              , ai.status
+         FROM   answer_instance ai
+         WHERE  ai.question_id = :qid',
+        0, 20, array(':qid' => $recordAnswer->question_id)
+        );
+
+    foreach ($resultAnswer as $recordAnswer) {
+      // Create a member variable that consists of an array of answers
+      // for a single question on the exam.  
+      array_push($this->ei_answerSet, 
+          array(  'answer_id'          => $recordAnswer->answer_id 
+                , 'answer_instance_id' => $aiid
+                , 'answer_letter'      => ExamInstance::$sRangeLetters[$vAnswerCounter]
+                , 'answer_text'        => $recordAnswer->answer_text
+                , 'is_correct'         => $recordAnswer->is_correct
+                , 'rationale'          => $recordAnswer->rationale
+               )
+          );     
+    }
+    
+    
+    //
+    // Step 4 of 4: Build ei_qa
+    //
+    
+    return $this;
+    
+  }
+  
+  /* Extra Queries */
+  
+      // Query to return number of questions correct
+    $result = db_query(
+        'SELECT    q.topic_instance_id
+                 , t.topic_title
+                 , COUNT(q.question_instance_id) tot_q
+         FROM      question_instance AS q
+         LEFT JOIN topic_instance as t
+         ON        q.topic_instance_id = t.topic_instance_id
+         WHERE     IFNULL(q.selected_answer_instance_id,0) NOT IN
+                  (SELECT a.answer_instance_id
+                   FROM   answer_instance AS a
+                   WHERE  a.is_correct)
+           AND     q.exam_instance_id = :eiid
+         GROUP BY  t.topic_instance_id
+                 , t.topic_title
+         ORDER BY  tot_q DESC',
+      array(':eiid' => $pExamInstanceID)
+    ); 
+    
+    /* End of Extra Queries */
+    
+  
+    
+/**
+ * function loadNewExamObject()
+ * 
+ * Stored in: exam.class.inc
+ * 
+ * @global type $user
+ * @param type $examID
+ * @return type
+ */
+  function loadNewExamObject($examID) {
+    
+    global $user;
+    
+    // Create a counter to be used in the calculation of each question number
+    $vQuestionCounter = 0;
+
+    //
+    // STEP ONE:  Copy the data for the exam 
+    // from the master tables to the instance tables
+    //
+    
+    //
+    // Note:  we are choosing not to use
+    // the SQL statement style of INSERT ... SELECT
+    // where a single INSERT statement queries all the
+    // data it requires from elsewhere in the database
+    // and then inserts that data into the target table.
+    // We're not doing that because we need to inject the 
+    // ability to (a) insert a row, (b) obtain the primary key
+    // (c) include that primary key in the next INSERT statement
+    // and we couldn't figure out a way to do that across 
+    // multiple INSERT statements.  So instead we're doing a
+    // series of SELECT and INSERT statements, working on 
+    // individual rows within a series of nested DO loops.
+    // 
+    // ************************************************
+    // * First, Copy row (just one) from exam to exam_instance 
+    // ************************************************
+    
+    // There will only be one row from the exam table
+    $resultExam = db_query(
+         'SELECT   e.exam_id
+                 , e.type
+                 , e.exam_title
+                 , e.exam_description
+                 , e.vid
+                 , e.status
+                 , count(q.question_id) totalQuestions
+          FROM     exam e LEFT JOIN question q 
+          ON      (e.exam_id = q.exam_id)
+          WHERE    e.exam_id = :eid
+          GROUP BY e.exam_id
+                 , e.type
+                 , e.exam_title
+                 , e.exam_description
+                 , e.vid
+                 , e.status',
+          array(':eid' => $examID)
+          );
+      
+    foreach ($resultExam as $recordExam) {
+   
+      // Building the exam object
+      // Part 1: Capture the exam info into an array
+      // Note:  there should only be one row of data for this,
+      // thus, an array of one dimension
+      $this->ei_exam = array(
+          'exam_id'          => $recordExam->exam_id,
+          'exam_title'       => $recordExam->exam_title,
+          'type'             => $recordExam->type,
+          'exam_description' => $recordExam->exam_description,
+          'graded'           => null, // $this->vGraded,
+          'grade'            => null,
+          'totalQuestions'   => $recordExam->totalQuestions,
+          'numberCorrect'    => null,
+          'numberWrong'      => null,
+          'numberUnanswered' => null,
+          'vid'              => $recordExam->vid,
+          'status'           => $recordExam->status,
+        );
+      
+      // Insert the exam record into the exam_instance table.  
+      // Be sure to capture the newly created primary key value, which
+      // is the exam_instance_id.
+      $eiid = db_insert('exam_instance')
+          ->fields(array(
+              'exam_id'          => $recordExam->exam_id
+            , 'type'             => $recordExam->type
+            , 'exam_title'       => $recordExam->exam_title
+            , 'exam_description' => $recordExam->exam_description
+            , 'graded'           => $this->vGraded
+            , 'totalQuestions'   => $recordExam->totalQuestions
+            , 'vid'              => $recordExam->vid         
+            , 'status'           => $recordExam->status
+            , 'created'          => REQUEST_TIME
+            , 'user_id'          => $user->uid // SKERE - Replace with USER ID
+          ))
+          ->execute();
+      
+      // Update our exam object to contain the value for the new primary key value.
+      $this->ei_exam['exam_instance_id'] = $eiid;
+
+      // Next, get the master data on the topics for this exam
+      $resultTopic = db_query(
+          'SELECT t.topic_id
+                , t.topic_title
+                , t.vid
+                , t.status
+           FROM   topic t
+           WHERE  t.exam_id = :eid',
+           array(':eid' => $examID)
+          );
+      
+      foreach ($resultTopic as $recordTopic) {
+        
+        // Use the master data to create
+        // a set of rows in the topic_instance table.
+        // Be sure to capture the newly created topic_instance_id value
+        
+        $tiid = db_insert('topic_instance')
+            ->fields(array(
+                'exam_instance_id' => $eiid
+              , 'topic_id'         => $recordTopic->topic_id
+              , 'exam_instance_id' => $eiid
+              , 'topic_title'      => $recordTopic->topic_title
+              , 'vid'              => $recordTopic->vid
+              , 'status'           => $recordTopic->status
+              , 'created'          => REQUEST_TIME
+            ))
+            ->execute();    
+
+        // Building the exam object
+        // Part 2: Store the topic info into an array   
+        // Be sure to include the newly created
+        // exam_instance_id, stored in the $eiid variable,
+        // and the newly created topic_instance_id variable,
+        // stored in $tiid.
+        // 
+ 
+        array_push($this->ei_topic, 
+            array(  'topic_id'          => $recordTopic->topic_id
+                  , 'topic_instance_id' => $tiid
+                  , 'exam_instance_id'  => $eiid
+                  , 'topic_title'       => $recordTopic->topic_title
+                  , 'totalQuestions'    => null
+                  , 'numberCorrect'     => null
+                  , 'numberWrong'       => null
+                  , 'numberUnanswered'  => null            
+                 )
+            ); 
+        
+        //$vTotalNumberOfQuestions = $_SESSION['pTotalNumberOfQuestions'];
+        //print "Skere - vTotalNumberOfQuestions = " . $vTotalNumberOfQuestions . "<br>";
+        $resultQuestion = db_query(
+            'SELECT q.question_id
+                  , q.question_text
+                  , q.vid
+                  , q.status
+             FROM   question q
+             WHERE  q.exam_id  = :eid
+               AND  q.topic_id = :tid',
+             array(':eid' => $examID, ':tid' => $recordTopic->topic_id)
+            );
+        
+        foreach ($resultQuestion as $recordQuestion) {
+
+          // Increment the question number
+          $vQuestionCounter++;
+
+           // ADDED 8/20/2013 FOR DEBUGGING
+          //print "Skere - vQuestionCounter = " . $vQuestionCounter . "<br>";
+          //print "Skere - recordTopic topic_id = " . $recordTopic->topic_id . "<br>";
+        
+          // Initialize ei_answerSet          
+          $this->ei_answerSet = array('0');
+
+          // Insert the question record.  Capture the newly created primary key value.
+          
+          $qiid = db_insert('question_instance')
+              ->fields(array(
+                  'exam_instance_id'  => $eiid
+                , 'topic_id'          => $recordTopic->topic_id // Note: $recordTopic
+                , 'topic_instance_id' => $tiid
+                , 'question_id'       => $recordQuestion->question_id
+                , 'question_no'       => $vQuestionCounter
+                , 'question_text'     => $recordQuestion->question_text
+                , 'vid'               => $recordQuestion->vid
+                , 'status'            => $recordQuestion->status
+                , 'created'           => REQUEST_TIME
+              ))
+              ->execute();
+                  
+          $resultAnswer = db_query(
+              'SELECT a.answer_id
+                    , a.answer_text
+                    , a.is_correct
+                    , a.rationale
+                    , a.vid
+                    , a.status
+               FROM   answer a
+               WHERE  a.question_id = :qid',
+              array(':qid' => $recordQuestion->question_id)
+              );
+          
+          // Create a counter.  Primary purpose is to walk through
+          // the array of letters ('A', 'B', etc.) to assign to answers.
+          $vAnswerCounter = 0;
+          foreach ($resultAnswer as $recordAnswer) {
+            $vAnswerCounter++;            
+
+            // Insert the answer record into the answer_instance table.   
+
+            $aiid = db_insert('answer_instance')
+                ->fields(array(
+                  'question_instance_id' => $qiid
+                , 'answer_id'            => $recordAnswer->answer_id
+                , 'answer_letter'        => ExamInstance::$sRangeLetters[$vAnswerCounter]
+                , 'answer_text'          => $recordAnswer->answer_text
+                , 'is_correct'           => $recordAnswer->is_correct
+                , 'rationale'            => $recordAnswer->rationale
+                , 'vid'                  => $recordAnswer->vid
+                , 'status'               => $recordAnswer->status
+                , 'created'              => REQUEST_TIME
+               ))
+               ->execute();
+
+            // Create a member variable that consists of an array of answers
+            // for a single question on the exam.  
+            array_push($this->ei_answerSet, 
+                array(  'answer_id'          => $recordAnswer->answer_id 
+                      , 'answer_instance_id' => $aiid
+                      , 'answer_letter'      => ExamInstance::$sRangeLetters[$vAnswerCounter]
+                      , 'answer_text'        => $recordAnswer->answer_text
+                      , 'is_correct'         => $recordAnswer->is_correct
+                      , 'rationale'          => $recordAnswer->rationale
+                     )
+                );             
+          } // $recordAnswer
+          
+          // Create a member variable that consists of an array of questions
+          // for the exam, and include a single array of answers ($ei_answerSet)
+          // which is the set of answers that pertain to just this one question
+          array_push($this->ei_qa, 
+              array(  'question_id'            => $recordQuestion->question_id 
+                    , 'question_instance_id'   => $qiid
+                    , 'topic_id'               => $recordTopic->topic_id
+                    , 'topic_instance_id'      => $tiid 
+                    , 'question_no'            => $vQuestionCounter
+                    , 'question_text'          => $recordQuestion->question_text
+                    , 'theAnswers'             => $this->ei_answerSet
+                    , 'selected_answer_instance_id' => null
+                    , 'selected_answer_letter' => null
+                    , 'answeredCorrectly'      => null // null means "unanswered".
+                    , 'marked'                 => null
+                    , 'selected_answer_number' => $recordQuestion->selected_answer_number
+                   )
+              ); 
+          
+        } // $recordQuestion
+        
+      } // $recordTopic
+      
+    } // $recordExam
+    
+    ++ExamInstance::$total_Exams_In_Play; // Increment the master counter by one
+    
+    return $this;
+  } // function loadNewExamObject($examID)
