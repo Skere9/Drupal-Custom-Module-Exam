@@ -1,0 +1,16 @@
+name = Exam
+description = Exam module for DatabaseTraining.com
+core = 7.x
+package = Corbinian Custom Modules
+files[] = exam.module
+files[] = exam.pages.basic.inc
+files[] = exam.pages.inc
+files[] = exam.admin.inc
+files[] = exam.install
+files[] = exam.controller.inc
+files[] = exam.class.inc
+
+dependencies[] = field_ui
+
+stylesheets[all][] = examQuestions.css
+stylesheets[all][] = tableSorter/style.css
