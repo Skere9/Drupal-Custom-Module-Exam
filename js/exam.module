@@ -1,0 +1,1046 @@
+<?php
+
+/**
+ * Implements hook_entity_info().
+ */
+function exam_entity_info() {
+  $return['exam'] = array(
+    'label' => t('Exam'),
+    'controller class' => 'ExamController',
+    'base table' => 'exam',
+    'revision table' => 'exam_revision',
+    'uri callback' => 'exam_uri',
+    'fieldable' => TRUE,
+    'entity keys' => array(
+      'id' => 'exam_id',
+      'revision' => 'vid',
+      'bundle' => 'type',
+      'label' => 'exam_title',
+     ),
+    'bundle keys' => array(
+      'bundle' => 'type',
+    ),
+    'static cache' => TRUE,
+    'bundles' => array(),
+    'view modes' => array(
+      'full' => array(
+        'label' => t('Full content'),
+        'custom settings' => FALSE,
+      ),
+      'teaser' => array(
+        'label' => t('Teaser'),
+        'custom settings' => FALSE,
+      ),
+    ),
+  );
+
+  foreach (exam_types() as $type => $info) {
+    $return['exam']['bundles'][$type] = array(
+      'label' => $info->name,
+      'admin' => array(
+        'path' => 'admin/structure/exams/manage/%exam_type',
+        'real path' => 'admin/structure/exams/manage/' 
+          . ExamInstance::getExamTitleForURL($type),
+        'bundle argument' => 4,
+        'access arguments' => array('administer exams'),
+      ),
+    );
+  }
+
+  $return['topic'] = array(
+    'label' => t('Topic'),
+    'controller class' => 'TopicController',
+    'base table' => 'topic',
+    'revision table' => 'topic_revision',
+    'uri callback' => 'topic_uri',
+    'fieldable' => TRUE,
+    'entity keys' => array(
+      'id' => 'topic_id',
+      'revision' => 'vid',
+      'label' => 'topic_title',
+     ),
+    'static cache' => TRUE,
+    'view modes' => array(
+      'full' => array(
+        'label' => t('Full content'),
+        'custom settings' => FALSE,
+      ),
+      'teaser' => array(
+        'label' => t('Teaser'),
+        'custom settings' => FALSE,
+      ),
+    ),
+  );
+
+  $return['question'] = array(
+    'label' => t('Question'),
+    'controller class' => 'QuestionController',
+    'base table' => 'question',
+    'revision table' => 'question_revision',
+    'uri callback' => 'question_uri',
+    'fieldable' => TRUE,
+    'entity keys' => array(
+      'id' => 'question_id',
+      'revision' => 'vid',
+      'label' => 'question_text',
+     ),
+    'static cache' => TRUE,
+    'view modes' => array(
+      'full' => array(
+        'label' => t('Full content'),
+        'custom settings' => FALSE,
+      ),
+      'teaser' => array(
+        'label' => t('Teaser'),
+        'custom settings' => FALSE,
+      ),
+    ),
+  );
+  
+  $return['answer'] = array(
+    'label' => t('Answer'),
+    'controller class' => 'AnswerController',
+    'base table' => 'answer',
+    'revision table' => 'answer_revision',
+    'uri callback' => 'answer_uri',
+    'fieldable' => TRUE,
+    'entity keys' => array(
+      'id' => 'answer_id',
+      'revision' => 'vid',
+      'label' => 'answer_text',
+     ),
+    'static cache' => TRUE,
+    'view modes' => array(
+      'full' => array(
+        'label' => t('Full content'),
+        'custom settings' => FALSE,
+      ),
+      'teaser' => array(
+        'label' => t('Teaser'),
+        'custom settings' => FALSE,
+      ),
+    ),
+  );
+  
+  return $return;
+}
+
+/**
+ * Entity uri callback.
+ */
+function exam_uri($exam) {
+  return array(
+    'path' => 'exam/' . $exam->exam_id,
+  );
+}
+
+/**
+ * Entity uri callback.
+ */
+function topic_uri($topic) {
+  return array(
+    'path' => 'topic/' . $topic->topic_id,
+  );
+}
+
+/**
+ * Implements hook_field_extra_fields().
+ */
+function exam_field_extra_fields() {
+  $extra = array();
+
+  foreach (exam_types() as $type) {
+    $extra['exam'][$type->type] = array(
+      'form' => array(
+        'exam_title' => array(
+          'label' => t('Exam Title'),
+          'description' => t('The title, or name, of the exam'),
+          'weight' => -5,
+        ),
+      ),
+      'display' => array(
+        'exam_title' => array(
+          'label' => t('Exam Title'),
+          'description' => t('The title, or name, of the exam'),
+          'weight' => -5,
+        ),
+      ),
+    );
+  }
+
+  return $extra;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function exam_permission() {
+  return array(
+    'administer exam' =>  array(
+      'title' => t('<em>Administrator</em>: Administer exams'),
+    ),
+    'create exam' =>  array(
+      'title' => t('<em>Administrator</em>: Create exams'),
+    ),
+    'update exam' =>  array(
+      'title' => t('<em>Administrator</em>: Update exams'),
+    ),
+    'delete exam' =>  array(
+      'title' => t('<em>Administrator</em>: Delete exams'),
+    ),
+    'view exam' =>  array(
+      'title' => t('<em>Student</em>: View exams'),
+    ),
+    'take exam' =>  array(
+      'title' => t('<em>Student</em>: Take exams'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_menu().
+ */
+function exam_menu() {
+  
+  // basic menu items, my first set of basic functions
+  $items['admin/structure/exams'] = array(
+    'title' => 'Manage exams',
+    'description' => 'Manage exams.',
+    'page callback' => 'exam_overview_types',
+    'access arguments' => array('administer exam'),
+    'file' => 'exam.admin.inc',
+  );
+  $items['admin/structure/exams/manage/%exam_type'] = array(
+    'title' => 'View exam type',
+    'title callback' => 'exam_type_page_title', //This is a function
+    'title arguments' => array(4),
+    'page callback' => 'exam_information',
+    'page arguments' => array(4),
+    'access arguments' => array('administer exam'),
+    'file' => 'exam.admin.inc',
+  );
+  $items['admin/structure/exams/manage/%exam_type/view'] = array(
+    'title' => 'View',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+  );
+
+  $items['exam/add'] = array(
+    'title' => 'Add new exam',
+    'page callback' => 'exam_add_page',
+    'access arguments' => array('create exam'),
+    'weight' => 1,
+    'menu_name' => 'management',
+    'file' => 'exam.pages.basic.inc',
+  );
+  foreach (exam_types() as $type) {
+    $type_url_str = str_replace('_', '-', $type->type);
+    $items['exam/add/' . $type_url_str] = array(
+      'title' => $type->name,
+      'title callback' => 'check_plain',
+      'page callback' => 'exam_add',
+      'page arguments' => array(2),
+      'access arguments' => array('create exam'),
+      'description' => $type->description,
+      'file' => 'exam.pages.basic.inc',
+    );
+  }
+  $items['exam/%exam'] = array(
+    'title callback' => 'exam_page_title', // this is a function call
+    'title arguments' => array(1),
+    'page callback' => 'exam_page_view',
+    'page arguments' => array(1),
+    'access arguments' => array('view exam'),
+    'type' => MENU_CALLBACK,
+    'file' => 'exam.pages.basic.inc',
+  );
+  $items['exam/%exam/view'] = array(
+    'title' => 'View',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
+  $items['exam/%exam/edit'] = array(
+    'title' => 'Edit',
+    'page callback' => 'exam_page_edit',
+    'page arguments' => array(1),
+    'access arguments' => array('update exam'),
+    'weight' => 0,
+    'type' => MENU_LOCAL_TASK,
+    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    'file' => 'exam.pages.basic.inc',
+  );
+  $items['exam/%exam/delete'] = array(
+    'title' => 'Delete',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('exam_delete_confirm', 1),
+    'access arguments' => array('delete exam'),
+    'weight' => 1,
+    'type' => MENU_LOCAL_TASK,
+    'context' => MENU_CONTEXT_INLINE,
+    'file' => 'exam.pages.basic.inc',
+  );
+  //$items['exam/recent'] = array(
+  //  'title' => 'Recently added exams',
+  //  'page callback' => 'exam_page_list_recent',
+  //  'access arguments' => array('view exam'),
+  //  'file' => 'exam.pages.basic.inc',
+  //);
+  $items['topic/add'] = array(
+    'title' => 'Add new topic',
+    'page callback' => 'topic_add',
+    'access arguments' => array('create exam'),
+    'weight' => 2,
+    'menu_name' => 'management',
+    'file' => 'exam.pages.basic.inc',
+  );
+  $items['topic/%topic'] = array(
+    'title callback' => 'topic_page_title', // This is a function call
+    'title arguments' => array(1),
+    'page callback' => 'topic_page_view',
+    'page arguments' => array(1),
+    'access arguments' => array('view exam'),
+    'type' => MENU_CALLBACK,
+    'file' => 'exam.pages.basic.inc', // Correct. The file is "exam", not "topic".
+  );
+  $items['question/add'] = array(
+    'title' => 'Add new question',
+    'page callback' => 'question_add',
+    'access arguments' => array('create exam'),
+    'weight' => 3,
+    'menu_name' => 'management',
+    'file' => 'exam.pages.basic.inc',
+  );
+  $items['question/%question'] = array(
+    'title callback' => 'question_page_title',
+    'title arguments' => array(1),
+    'page callback' => 'question_page_view',
+    'page arguments' => array(1),
+    'access arguments' => array('view exam'),
+    'type' => MENU_CALLBACK,
+    'file' => 'exam.pages.basic.inc', // Correct. The file is "exam", not "question".
+  );
+  $items['answer/add'] = array(
+    'title' => 'Add new answer',
+    'page callback' => 'answer_add',
+    'access arguments' => array('create exam'),
+    'weight' => 4,
+    'menu_name' => 'management',
+    'file' => 'exam.pages.basic.inc',
+  );
+  $items['answer/%answer'] = array(
+    'title callback' => 'answer_page_title',
+    'title arguments' => array(1),
+    'page callback' => 'answer_page_view',
+    'page arguments' => array(1),
+    'access arguments' => array('view exam'),
+    'type' => MENU_CALLBACK,
+    'file' => 'exam.pages.basic.inc', // Correct. The file is "exam", not "answer".
+  );
+  
+  // This begins the exam menu items
+  $items['exam/list'] = array(
+    'title' => 'List available exams',
+    'page callback' => 'exam_list',
+    'access arguments' => array('view exam'),
+    'weight' => 5,
+    'menu_name' => 'navigation', // Place this menu option on the user navigation page
+    'file' => 'exam.pages.inc',
+  );
+  // The following code creates one link per exam in the exam table.
+  // It is not a menu option.
+  foreach (exam_selections() as $type) {
+    $type_url_str = str_replace('_', '-', $type->type);
+    $items['exam/list/' . $type_url_str] = array(
+      'type' => MENU_CALLBACK,      
+      'title' => $type->name,
+      'title callback' => 'check_plain',
+      'page callback' => 'exam_welcome',
+      'page arguments' => array($type->exam_id),
+      'access arguments' => array('view exam'),
+      'description' => $type->description,
+      'file' => 'exam.pages.inc',
+    );
+  }
+  // The following code creates one link per exam in the exam table.
+  // It is not a menu option.
+  // This is the same as the set of menu items
+  // under 'exam/list/*', with the following differences:
+  //  -- instead of calling exam_welcome, these 
+  //     call exam_welcome_back
+  //  -- instead of passing examID, these pass examInstanceID
+  //  -- instead of 'exam/list' followed by a string name of the exam, followed by exam_id,
+  //     these are 'exam/continue' followed by the exam_instance_id
+  //  -- instead of a call to a function that returns text,
+  //     this is a call to a function that returns a form
+  //     using drupal_get_form as the "page callback" and
+  //     the form name as the first of the "page arguments".
+  foreach (exam_selections() as $type) {
+    $type_url_str = str_replace('_', '-', $type->type);
+    $items['exam/continue/' . $type_url_str] = array(
+      'type' => MENU_CALLBACK,      
+      'title' => $type->name,
+      'title callback' => 'check_plain',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('exam_welcome_back'),
+      'access arguments' => array('take exam'),
+      'description' => $type->description,
+      'file' => 'exam.pages.inc',
+    );
+  }
+  foreach (exam_selections() as $type) {
+    $type_url_str = str_replace('_', '-', $type->type);
+    $items['exam/take/' . $type_url_str] = array(
+      'type' => MENU_CALLBACK,
+      'title' => $type->name,
+      'title callback' => 'check_plain',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('exam_take_form',$type->exam_id),
+      'access arguments' => array('take exam'),
+      'description' => $type->description,
+      'file' => 'exam.pages.inc',
+    );    
+  }
+  foreach (exam_selections() as $type) {
+    $type_url_str = str_replace('_', '-', $type->type);
+    $items['exam/take/' . $type_url_str . '/summary'] = array(
+      'type' => MENU_CALLBACK,
+      'title' => $type->name,
+      'title callback' => 'check_plain',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('exam_take_show_summary_form'),
+      'access arguments' => array('take exam'),
+      'description' => $type->description,
+      'file' => 'exam.pages.inc',
+    ); 
+  }
+  // used for testing form.  Remove when done.
+  $items['exam/take'] = array(
+    'type' => MENU_CALLBACK,
+    'title' => 'Take exams - form',
+    'page callback' => 'drupal_get_form',
+    'access arguments' => array('take exam'),
+    'page arguments' => array('exam_take_form'),
+    'menu_name' => 'navigation', // Place this menu option on the user navigation page
+    'file' => 'exam.pages.inc',
+  );
+  foreach (exam_selections() as $type) {
+    $type_url_str = str_replace('_', '-', $type->type);
+    $items['exam/grade/' . $type_url_str ] = array(
+      'type' => MENU_CALLBACK,
+      'title' => $type->name,
+      'title callback' => 'check_plain',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('exam_take_show_grade_form',$type->exam_id),
+      'access arguments' => array('take exam'),
+      'description' => $type->description,
+      'file' => 'exam.pages.inc',
+    ); 
+  }
+  // Not intended to be a menu option
+  // This is the page that shows if someone 
+  // tries to back up and re-work an exam 
+  // they've already completed.  (Alreay graded.)
+  $items['exam/oops'] = array(
+    'type' => MENU_CALLBACK,
+    'title' => 'Exam - Redirect',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('exam_oops_page'),
+    'access arguments' => array('take exam'),
+    'file' => 'exam.pages.inc',
+  );  
+  // Intended to be a menu option.  
+  // List the completed exams a user has already taken.
+  $items['exam/history'] = array(
+    'menu_name' => 'navigation',
+    'weight' => 6,
+    'title' => 'My exam history',
+    'page callback' => 'exam_history_list',
+    'access arguments' => array('take exam'), 
+    'file' => 'exam.pages.inc',
+  );
+  // Not intended to be a menu option,
+  // but instead is chosen from "history" as a 
+  // drill-down.  Displays a particular
+  // exam's history
+  $items['exam/record'] = array(
+    'type' => MENU_CALLBACK,
+    //'title' => 'Display an exam record',
+    'page callback' => 'exam_record_display',
+    'access arguments' => array('take exam'), 
+    'file' => 'exam.pages.inc',
+  );
+  // Not intended to be a menu option.  
+  // Remove a single exam from the displayed exam history list
+  $items['exam/history/removeOne'] = array(
+    'type' => MENU_CALLBACK,
+    'title' => 'Remove one exam from history',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('exam_history_list_removeOne'),
+    'access arguments' => array('take exam'), 
+    'file' => 'exam.pages.inc',
+  );    
+  // A menu option that enables the 
+  // end user to manually rebuild the menu structure
+  // This is useful when running SQL to add exam data 
+  // to the system.  Any new exams entered will become
+  // menu options after 
+  // (a) adding an exam to the database manually, then 
+  // (b) running this "menu rebuild".
+  $items['exam/rebuild'] = array(
+    'menu_name' => 'navigation',
+    'weight' => 6,
+    'title' => 'Rebuild menus',
+    'page callback' => 'exam_menu_rebuild',
+    'access arguments' => array('take exam'), 
+    'file' => 'exam.pages.inc',
+  ); 
+  $items['exam/test/one'] = array(
+    'menu_name' => 'navigation',
+    'title' => 'Variables Test Part 1',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('exam_test_one'),
+    'access arguments' => array('take exam'), 
+    'file' => 'exam.pages.inc',
+  );   
+  $items['exam/test/three'] = array(
+    'type' => MENU_CALLBACK,    
+    'title' => 'Variables Test Part 3',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('exam_test_three'),    
+    'access arguments' => array('take exam'), 
+    'file' => 'exam.pages.inc',
+  );   
+//    $menuCount = 1;
+//    while ($menuCount <= 3) {
+//      $items['exam/take/' . $type_url_str . '/' . $menuCount] = array(
+//        'type' => MENU_CALLBACK,
+//        'title' => $type->name,
+//        'title callback' => 'check_plain',
+//        'page callback' => 'exam_take',
+//        'page arguments' => array($type->exam_id, $menuCount),
+//        'access arguments' => array('take exam'),
+//        'description' => $type->description,
+//        'file' => 'exam.pages.inc',
+//      );      
+//      $menuCount++;
+//    }
+//  }
+  
+  // SKERE - IN WORK - END
+  return $items;
+}
+
+/**
+ * Sets the page title based on the specified exam.
+ *
+ * @param $exam
+ *   The exam object.
+ */
+function exam_page_title($exam) {
+  return $exam->exam_title;
+}
+
+/**
+ * Sets the page title based on the specified topic.
+ *
+ * @param $topic
+ *   The topic object.
+ */
+function topic_page_title($topic) {
+  return $topic->topic_title;
+}
+
+/**
+ * Implements hook_forms().
+ *
+ * All exam forms share the same form handler.
+ */
+function exam_forms() {
+  $forms = array();
+  if ($types = exam_types()) {
+    foreach (array_keys($types) as $type) {
+      $forms[$type . '_exam_form']['callback'] = 'exam_form';
+    }
+  }
+  return $forms;
+}
+
+/**
+ * Get a list of all exam types available.
+ *
+ * Usually this would be more full-featured.
+ *
+ * @return array
+ *   An array of exam type objects. Note that the "type" key matches what
+ *   was defined as the main key in hook_entity_info().
+ */
+function exam_types() {
+  $types = &drupal_static(__FUNCTION__);
+
+  if (empty($types)) {
+    $types['pop quiz'] = (object)array(
+      'type' => 'pop quiz',
+      'name' => t('Pop Quiz'),
+      'description' => t('A pop quiz, generally about a dozen questions.')
+    );
+    $types['exam'] = (object)array(
+      'type' => 'exam',
+      'name' => t('Exam'),
+      'description' => t('An examination, about 25 questions.')
+    );
+    $types['certification test'] = (object)array(
+      'type' => 'certification test',
+      'name' => t('Certification Test'),
+      'description' => t('A certification text, about 60 to 80 questions or more.')
+    );
+  }
+  return $types;
+}
+
+/**
+ * Get a list of all exam selections available.
+ *
+ * @return array
+ *   An array of exam selection objects, 
+ *   from the "exams" table (the SQL table).
+ * 
+ */
+function exam_selections() {
+  $types = &drupal_static(__FUNCTION__);
+  //$content = '<p>This is the exam.</p>';
+  $result = db_query(
+      ' SELECT e.exam_id, e.exam_title, e.exam_description, count(q.question_id) as tot_q ' .
+      ' FROM exam as e LEFT JOIN question as q ' .
+      ' ON e.exam_id = q.exam_id ' .
+      //'WHERE e.exam_id = :id ' .
+      ' GROUP BY e.exam_id, e.exam_title, e.exam_description'
+      );
+      //, array(':id' => '1')); // SKERE - Replace 2 with the selected exam_id value    
+  if (empty($types)) {
+    //if ($result->rowCount() === 0){
+    //  $content = $content . '<p>There are no exams stored in the system.</p>';
+    //}
+    //else { 
+      $counter = 1;
+      while ($row = $result->fetchAssoc()) {
+        $types[$counter] = (object)array(
+          'exam_id'     => $row['exam_id'],
+          'type'        => ExamInstance::getExamTitleForURL($row['exam_title']),
+          'name'        => $row['exam_title'],
+          'description' => $row['exam_description']);
+        $counter++;
+        //'tot_q'       => $row['tot_q'],
+     //   }
+    }
+  }
+  return $types;
+}
+
+/**
+ * Menu title callback.
+ *
+ * @param $type
+ *   The exam type.
+ * @return string
+ *   The human-friendly name of the exam type.
+ */
+function exam_type_page_title($type) {
+  return t('Manage @type', array('@type' => $type->name));
+}
+
+/**
+ * Get an individual exam type definition object.
+ *
+ * @param $type
+ *   The key of the exam type we want.
+ * @return object
+ *   The specified exam type.
+ */
+function exam_type_load($type) {
+  $types = exam_types();
+  $type = str_replace('-', '_', $type);
+  return isset($types[$type]) ? $types[$type] : FALSE;
+}
+
+/**
+ * Load exam entities from the database.
+ *
+ * This function should be used whenever you need to load more than one exam
+ * from the database. Exams are loaded into memory and will not require
+ * database access if loaded again during the same page request.
+ *
+ * @see entity_load()
+ *
+ * @param $exam_ids
+ *   An array of exam IDs.
+ * @param $conditions
+ *   An array of conditions on the {exam} table in the form 'field' => $value.
+ * @param $reset
+ *   Whether to reset the internal entity_load cache.
+ *
+ * @return
+ *   An array of node objects indexed by nid.
+ */
+function exam_load_multiple($exam_ids = array(), $conditions = array(), $reset = FALSE) {
+  return entity_load('exam', $exam_ids, $conditions, $reset);
+}
+
+/**
+ * Load an exam object from the database.
+ *
+ * @param $exam_id
+ *   The exam ID.
+ * @param $vid
+ *   The revision ID.
+ * @param $reset
+ *   Whether to reset the exam_load_multiple cache.
+ *
+ * @return
+ *   A fully-populated node object.
+ */
+function exam_load($exam_id = NULL, $vid = NULL, $reset = FALSE) {
+  $exam_ids = (isset($exam_id) ? array($exam_id) : array());
+  $conditions = (isset($vid) ? array('vid' => $vid) : array());
+  $exam = exam_load_multiple($exam_ids, $conditions, $reset);
+  return $exam ? reset($exam) : FALSE;
+}
+
+/**
+ * Load topic entities from the database.
+ *
+ * This function should be used whenever you need to load more than one topic
+ * from the database. Topics are loaded into memory and will not require
+ * database access if loaded again during the same page request.
+ *
+ * @see entity_load()
+ *
+ * @param $topic_ids
+ *   An array of topic IDs.
+ * @param $conditions
+ *   An array of conditions on the {topic} table in the form 'field' => $value.
+ * @param $reset
+ *   Whether to reset the internal entity_load cache.
+ *
+ * @return
+ *   An array of node objects indexed by nid.
+ */
+function topic_load_multiple($topic_ids = array(), $conditions = array(), $reset = FALSE) {
+  return entity_load('topic', $topic_ids, $conditions, $reset);
+}
+
+/**
+ * Load a topic object from the database.
+ *
+ * @param $topic_id
+ *   The topic ID.
+ * @param $vid
+ *   The revision ID.
+ * @param $reset
+ *   Whether to reset the topic_load_multiple cache.
+ *
+ * @return
+ *   A fully-populated node object.
+ */
+function topic_load($topic_id = NULL, $vid = NULL, $reset = FALSE) {
+  $topic_ids = (isset($topic_id) ? array($topic_id) : array());
+  $conditions = (isset($vid) ? array('vid' => $vid) : array());
+  $topic = topic_load_multiple($topic_ids, $conditions, $reset);
+  return $topic ? reset($topic) : FALSE;
+}
+
+/**
+ * Save an exam.
+ *
+ * @param $exam
+ *   The exam to be saved.
+ * @return
+ *   The saved exam, now with an exam_id if necessary.
+ */
+function exam_save($exam) {
+  return entity_get_controller('exam')->save($exam);
+}
+
+/**
+ * Returns an initialized exam object.
+ *
+ * @param $type
+ *   The machine-readable type of the exam.
+ *
+ * @return
+ *   An exam object with all default fields initialized.
+ */
+function exam_new($type = '') {
+  return entity_get_controller('exam')->create($type);
+}
+
+/**
+ * Save a topic.
+ *
+ * @param $topic
+ *   The topic to be saved.
+ * @return
+ *   The saved topic, now with a topic_id if necessary.
+ */
+function topic_save($topic) {
+  return entity_get_controller('topic')->save($topic);
+}
+
+/**
+ * Returns an initialized topic object.
+ *
+ *
+ * @return
+ *   A topic object with all default fields initialized.
+ */
+function topic_new() {
+  return topic_get_controller('topic')->create();
+}
+
+
+/**
+ * Deletes an exam by ID.
+ *
+ * @param $exam_id
+ *   The ID of the product to delete.
+ *
+ * @return
+ *   TRUE on success, FALSE otherwise.
+ */
+function exam_delete($exam_id) {
+  return exam_delete_multiple(array($exam_id));
+}
+
+/**
+ * Deletes multiple exams by ID.
+ *
+ * @param $exam_ids
+ *   An array of exam IDs to delete.
+ *
+ * @return
+ *   TRUE on success, FALSE otherwise.
+ */
+function exam_delete_multiple($exam_ids) {
+  return entity_get_controller('exam')->delete($exam_ids);
+}
+
+/**
+ * Load a question object from the database.
+ *
+ * @param $question_id
+ *   The question ID.
+ * @param $vid
+ *   The revision ID.
+ * @param $reset
+ *   Whether to reset the question_load_multiple cache.
+ *
+ * @return
+ *   A fully-populated node object.
+ */
+function question_load($question_id = NULL, $vid = NULL, $reset = FALSE) {
+  $question_ids = (isset($question_id) ? array($question_id) : array());
+  $conditions = (isset($vid) ? array('vid' => $vid) : array());
+  $question = question_load_multiple($question_ids, $conditions, $reset);
+  return $question ? reset($question) : FALSE;
+}
+
+/**
+ * Load question entities from the database.
+ *
+ * This function should be used whenever you need to load more than one question
+ * from the database. Questions are loaded into memory and will not require
+ * database access if loaded again during the same page request.
+ *
+ * @see entity_load()
+ *
+ * @param $question_ids
+ *   An array of question IDs.
+ * @param $conditions
+ *   An array of conditions on the {question} table in the form 'field' => $value.
+ * @param $reset
+ *   Whether to reset the internal entity_load cache.
+ *
+ * @return
+ *   An array of node objects indexed by nid.
+ */
+function question_load_multiple($question_ids = array(), $conditions = array(), $reset = FALSE) {
+  return entity_load('question', $question_ids, $conditions, $reset);
+}
+
+/**
+ * Returns an initialized question object.
+ *
+ *
+ * @return
+ *   A question object with all default fields initialized.
+ */
+function question_new() {
+  return question_get_controller('question')->create();
+}
+
+/**
+ * Sets the page title based on the specified question.
+ *
+ * @param $question
+ *   The question object.
+ */
+function question_page_title($question) {
+  return $question->question_text; // Use the text as the page title
+}
+
+/**
+ * Save a question.
+ *
+ * @param $question
+ *   The question- to be saved.
+ * @return
+ *   The saved question, now with a question_id if necessary.
+ */
+function question_save($question) {
+  return entity_get_controller('question')->save($question);
+}
+
+/**
+ * Entity uri callback.
+ */
+function question_uri($question) {
+  return array(
+    'path' => 'question/' . $question->question_id,
+  );
+}
+
+// SKERE START HERE
+
+/**
+ * Load an answer object from the database.
+ *
+ * @param $answer_id
+ *   The answer ID.
+ * @param $vid
+ *   The revision ID.
+ * @param $reset
+ *   Whether to reset the answer_load_multiple cache.
+ *
+ * @return
+ *   A fully-populated node object.
+ */
+function answer_load($answer_id = NULL, $vid = NULL, $reset = FALSE) {
+  $answer_ids = (isset($answer_id) ? array($answer_id) : array());
+  $conditions = (isset($vid) ? array('vid' => $vid) : array());
+  $answer = answer_load_multiple($answer_ids, $conditions, $reset);
+  return $answer ? reset($answer) : FALSE;
+}
+
+/**
+ * Load answer entities from the database.
+ *
+ * This function should be used whenever you need to load more than one answer
+ * from the database. Answers are loaded into memory and will not require
+ * database access if loaded again during the same page request.
+ *
+ * @see entity_load()
+ *
+ * @param $answer_ids
+ *   An array of answer IDs.
+ * @param $conditions
+ *   An array of conditions on the {answer} table in the form 'field' => $value.
+ * @param $reset
+ *   Whether to reset the internal entity_load cache.
+ *
+ * @return
+ *   An array of node objects indexed by nid.
+ */
+function answer_load_multiple($answer_ids = array(), $conditions = array(), $reset = FALSE) {
+  return entity_load('answer', $answer_ids, $conditions, $reset);
+}
+
+/**
+ * Returns an initialized answer object.
+ *
+ *
+ * @return
+ *   An answer object with all default fields initialized.
+ */
+function answer_new() {
+  return answer_get_controller('answer')->create();
+}
+
+/**
+ * Sets the page title based on the specified answer.
+ *
+ * @param $answer
+ *   The answer object.
+ */
+function answer_page_title($answer) {
+  return $answer->answer_text; // Use the text as the page title
+}
+
+/**
+ * Save a answer.
+ *
+ * @param $answer
+ *   The answer to be saved.
+ * @return
+ *   The saved answer, now with a answer_id if necessary.
+ */
+function answer_save($answer) {
+  return entity_get_controller('answer')->save($answer);
+}
+
+/**
+ * Entity uri callback.
+ */
+function answer_uri($answer) {
+  return array(
+    'path' => 'answer/' . $answer->answer_id,
+  );
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function exam_block_info() {
+  $blocks = array();
+  
+  $blocks['list_exams'] = array(
+    'info' => t('Exams - List of available exams.'),
+    'cache' => DRUPAL_NO_CACHE,
+  );
+
+  $blocks['list_user_exam_history'] = array(
+    'info' => t('Exams - User exam history.'),
+    'cache' => DRUPAL_NO_CACHE,
+  );
+    
+  return $blocks;
+}
+
+
+/**
+ * Implements exam_block_view().
+ */
+function exam_block_view($block_name = '') {
+  
+  if ($block_name == 'list_exams') {
+    
+    $vContent = t(ExamInstance::getListingOfExams());
+
+    $block = array(
+      'subject' => t('Exams - List of available exams.'),
+      'content' => $vContent,
+    );
+    
+    return $block;
+  }
+
+  if ($block_name == 'list_user_exam_history') {
+    
+    $vContent = t(ExamInstance::getListingOfUserExamHistory());
+
+    $block = array(
+      'subject' => t('Exams - User exam history.'),
+      'content' => $vContent,
+    );
+    
+    return $block;
+  }
+  
+}
