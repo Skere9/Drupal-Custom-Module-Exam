@@ -1,0 +1,41 @@
+/*
+ *
+ * DatabaseTraining.com
+ *
+ * Source Code CSS file
+ *
+ * Add to the top of the "responsive.css" for 
+ * the Best Reponsive theme
+ *
+ */
+
+.exam_code {
+  color:black;
+  font-style:normal;
+  font-family: monospace;
+}
+
+.exam_code_inline {
+  color:black;
+  font-style:normal;
+  font-family: monospace;
+}
+
+.exam_unused{
+    display:inline; /*  */
+}
+
+th.exam_numcol {
+  text-align: right;    
+}
+
+td.exam_numcol {
+  text-align: right;    
+}
+
+td.exam_numcolctr {
+  text-align: center;    
+}
+
+/* End of Added for DatabaseTraining.com Exam */
+
