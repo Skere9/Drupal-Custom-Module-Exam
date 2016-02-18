@@ -1,0 +1,935 @@
+<?php
+
+function exam_schema() {
+  
+  /*
+   * 
+   * exam 
+   * exam_revision
+   * exam_instance
+   * 
+   * topic
+   * topic_revision
+   * 
+   * question
+   * question_revision
+   * 
+   * answer
+   * answer_revision
+   * 
+   */
+  
+  $schema['exam'] = array(
+    'description' => 'The base table for exams.',
+    'fields' => array(
+      'exam_id' => array(
+        'description' => 'The primary identifier for an exam.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'exam_title' => array(
+        'description' => 'The title of this exam.',
+        'type' => 'varchar',
+        'length' => 80,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'exam_description' => array(
+        'description' => 'A brief description of this exam.',
+        'type' => 'varchar',
+        'length' => 255,
+        'default' => '',
+      ),
+      'type' => array(
+        'description' => 'The {exam_type} of this exam.',
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'vid' => array(
+        'description' => 'The current {exam_revision}.vid version identifier.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'status' => array(
+        'description' => 
+              'Status is 1 if published, 0 if not published.',
+        'type' => 'int',
+        //'not null' => TRUE, // Review this SKERE
+        'default' => 0,
+      ),
+      'created' => array(
+        'description' => 'The Unix timestamp when the exam was created.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'changed' => array(
+        'description' => 'The Unix timestamp when the exam was most recently saved.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'unique keys' => array(
+      'exam_id_vid' => array('exam_id', 'vid'),
+      'exam_title' => array('exam_title'),
+      ),
+    'primary key' => array('exam_id'),
+  );
+
+  $schema['exam_revision'] = array(
+    'description' => 'Stores information about each saved version of an {exam}.',
+    'fields' => array(
+      'exam_id' => array(
+        'description' => 'The {exam} this version belongs to.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'exam_title' => array(
+        'description' => 'The title of this exam.',
+        'type' => 'varchar',
+        'length' => 80,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'exam_description' => array(
+        'description' => 'A brief description of this exam.',
+        'type' => 'varchar',
+        'length' => 255,
+        'default' => '',
+      ),
+      'type' => array(
+        'description' => 'The {exam_type} of this exam.',
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'vid' => array(
+        'description' => 'The primary identifier for this version.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'status' => array(
+        'description' => 
+              'Status is 1 if published, 0 if not published.',
+        'type' => 'int',
+        //'not null' => TRUE, // Review this SKERE
+        'default' => 0,
+      ),
+      'created' => array(
+        'description' => 'The Unix timestamp when the exam was created.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('vid'),
+    'foreign keys' => array(
+      'exam' => array(
+        'table' => 'exam',
+        'columns' => array(
+          'exam_id' => 'exam_id',
+        ),
+      ),
+    ),
+  );
+
+  //
+  // exam_instance is a copy of an exam, taken by a student
+  //
+  
+  $schema['exam_instance'] = array(
+    'description' => 'The base table for an exam instance.',
+    'fields' => array(
+      'exam_instance_id' => array(
+        'description' => 'The primary identifier for an exam instance.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'user_id' => array(
+        'description' => 'The user id of the student who took this exam.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'exam_id' => array(
+        'description' => 'The exam id of the master exam record.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+     'type' => array(
+        'description' => 'The {exam_type} of this exam.',
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'exam_title' => array(
+        'description' => 'The title of this exam.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'exam_description' => array(
+        'description' => 'A brief description of this exam.',
+        'type' => 'varchar',
+        'length' => 255,
+        'default' => '',
+      ),
+      'graded' => array(
+        'description' => 'Whether or not the current exam has been graded.  1 is yes, 0 is no.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'grade' => array(
+        'description' => 'Final grade',
+        'type' => 'float',
+        'size' => 'medium',
+        'unsigned' => TRUE,
+      ),
+      'totalQuestions' => array(
+        'description' => 'The number of questions on this exam.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'numberCorrect' => array(
+        'description' => 'The number of questions answered correctly on this exam.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+      ),
+      'numberWrong' => array(
+        'description' => 'The number of questions answered incorrectly on this exam.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+      ),
+      'numberUnanswered' => array(
+        'description' => 'The number of questions unanswered on this exam.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+      ),
+      'showInHistory' => array(
+        'description' => 'If 0, user has deleted from history.  Otherwise, 1.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 1,
+      ),
+      'vid' => array(
+        'description' => 'The current {exam_revision}.vid version identifier.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+       'status' => array(
+        'description' => 
+              'Status is 1 if published, 0 if not published.',
+        'type' => 'int',
+        //'not null' => TRUE, // Review this SKERE
+        'default' => 0,
+      ),
+      'created' => array(
+        'description' => 'The Unix timestamp when the exam was created.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+
+    ),
+    'primary key' => array('exam_instance_id'),
+  );
+
+  $schema['topic'] = array(
+    'description' => 'The base table for topics.',
+    'fields' => array(
+      'topic_id' => array(
+        'description' => 'The primary identifier for a topic.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'exam_id' => array(
+        'description' => 'The foreign key identifier for an exam.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'topic_title' => array(
+        'description' => 'The title of this topic.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'for_more_info_see' => array(
+        'description' => 'A reference to study materials on this topic.',
+        'type' => 'text',
+      ),
+      'vid' => array(
+        'description' => 'The current {topic_revision}.vid version identifier.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'status' => array(
+        'description' => 
+              'Status is 1 if published, 0 if not published.',
+        'type' => 'int',
+        'not null' => TRUE, // Review this SKERE
+        'default' => 0,
+      ),
+      'created' => array(
+        'description' => 'The Unix timestamp when the exam was created.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'changed' => array(
+        'description' => 'The Unix timestamp when the exam was most recently saved.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+
+    ),
+    'unique keys' => array(
+      'topic_id_vid' => array('topic_id', 'vid'),
+      ),
+    'primary key' => array('topic_id'),
+  );
+
+  $schema['topic_revision'] = array(
+    'description' => 'Stores information about each saved version of a {topic}.',
+    'fields' => array(
+      'topic_id' => array(
+        'description' => 'The {topic} this version belongs to.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'exam_id' => array(
+        'description' => 'The foreign key identifier for an exam.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'topic_title' => array(
+        'description' => 'The title of this version.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'vid' => array(
+        'description' => 'The primary identifier for this version.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'status' => array(
+        'description' => 
+              'Status is 1 if published, 0 if not published.',
+        'type' => 'int',
+        'not null' => TRUE, // Review this SKERE
+        'default' => 0,
+      ),
+      'created' => array(
+        'description' => 'The Unix timestamp when the topic was created.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'indexes' => array(
+      'topic_id' => array('topic_id'),
+    ),
+    'primary key' => array('vid'),
+    'foreign keys' => array(
+      'topic' => array(
+        'table' => 'topic',
+        'columns' => array(
+          'topic_id' => 'topic_id',
+        ),
+      ),
+    ),
+  );
+
+  //
+  // topic_instance is a copy of a set of topics 
+  // pertaining to a given exam that is taken by a student
+  //
+  $schema['topic_instance'] = array(
+    'description' => 'The base table for topics.',
+    'fields' => array(
+      'topic_instance_id' => array(
+        'description' => 'The primary identifier for a topic instance.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'exam_instance_id' => array(
+        'description' => 'The foreign key identifier for an exam instance.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'topic_id' => array(
+        'description' => 'The {topic} this version belongs to.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+     'topic_title' => array(
+        'description' => 'The title of this topic.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'totalQuestions' => array(
+        'description' => 'The number of questions on this exam.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+      ),
+      'numberCorrect' => array(
+        'description' => 'The number of questions answered correctly on this exam.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+      ),
+      'numberWrong' => array(
+        'description' => 'The number of questions answered incorrectly on this exam.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+      ),
+      'numberUnanswered' => array(
+        'description' => 'The number of questions unanswered on this exam.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+      ),
+      'for_more_info_see' => array(
+        'description' => 'A reference to study materials on this topic.',
+        'type' => 'text',
+      ),
+      'vid' => array(
+        'description' => 'The primary identifier for this version.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'status' => array(
+        'description' => 
+              'Status is 1 if published, 0 if not published.',
+        'type' => 'int',
+        'not null' => TRUE, // Review this SKERE
+        'default' => 0,
+      ),
+      'created' => array(
+        'description' => 'The Unix timestamp when the exam was created.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('topic_instance_id'),
+  );
+
+  $schema['question'] = array(
+    'description' => 'The base table for questions.',
+    'fields' => array(
+      'question_id' => array(
+        'description' => 'The primary identifier for a question.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'exam_id' => array(
+        'description' => 'The foreign key identifier for an exam.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'topic_id' => array(
+        'description' => 'The foreign key identifier for a topic.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'question_text' => array(
+        'description' => 'The text of this question.',
+        'type' => 'text', //'length' => 255, 'not null' => TRUE, 'default' => '',
+      ),
+      'explanation_if_wrong' => array(
+        'description' => 'If the test taker answers this question incorrectly, display this explanation.',
+        'type' => 'text', //'length' => 255, 'not null' => TRUE, 'default' => '',
+      ),
+      'vid' => array(
+        'description' => 'The current {question_revision}.vid version identifier.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'status' => array(
+        'description' => 
+              'Status is 1 if published, 0 if not published.',
+        'type' => 'int',
+        //'not null' => TRUE, // Review this SKERE
+        'default' => 0,
+      ),
+      'created' => array(
+        'description' => 'The Unix timestamp when the question was created.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'changed' => array(
+        'description' => 'The Unix timestamp when the question was most recently saved.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+
+    ),
+    'unique keys' => array(
+      'question_id_vid' => array('question_id', 'vid'),
+      ),
+    'primary key' => array('question_id'),
+  );
+
+  $schema['question_revision'] = array(
+    'description' => 'Stores information about each saved version of a {question}.',
+    'fields' => array(
+      'question_id' => array(
+        'description' => 'The {question} this version belongs to.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'exam_id' => array(
+        'description' => 'The foreign key identifier for an exam.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'topic_id' => array(
+        'description' => 'The foreign key identifier for a topic.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'question_text' => array(
+        'description' => 'The question text of this version.',
+        'type' => 'text', // 'length' => 255, 'not null' => TRUE, 'default' => '',
+      ),
+      'vid' => array(
+        'description' => 'The primary identifier for this version.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'status' => array(
+        'description' => 
+              'Status is 1 if published, 0 if not published.',
+        'type' => 'int',
+        //'not null' => TRUE, // Review this SKERE
+        'default' => 0,
+      ),
+      'created' => array(
+        'description' => 'The Unix timestamp when the question was created.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'indexes' => array(
+      'question_id' => array('question_id'),
+    ),
+    'primary key' => array('vid'),
+    'foreign keys' => array(
+      'question' => array(
+        'table' => 'question',
+        'columns' => array(
+          'question_id' => 'question_id',
+        ),
+      ),
+    ),
+  );
+
+  $schema['question_instance'] = array(
+    'description' => 'The base table for questions pertaining to an exam instance.',
+    'fields' => array(
+      'question_instance_id' => array(
+        'description' => 'The primary identifier for a question instance.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'exam_instance_id' => array(
+        'description' => 'The foreign key identifier for an exam instance.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'topic_id' => array(
+        'description' => 'The foreign key identifier for a topic.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'topic_instance_id' => array(
+        'description' => 'The foreign key identifier for a topic instance.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'question_id' => array(
+        'description' => 'The primary identifier for a question.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'question_no' => array(
+        'description' => 'The question number (1 through ?) for this exam instance.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'question_text' => array(
+        'description' => 'The text of this question.',
+        'type' => 'text', // 'length' => 255, 'not null' => TRUE, 'default' => '',
+      ),
+      'marked' => array(
+        'description' => 'If 1, this question is marked for review.  If 0, then it is not marked.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'default' => 0,
+      ),
+      'selected_answer_letters' => array(
+        'description' => 'The answer_letter (A, B, etc.) of the selected answer(s) to this question.',
+        'type' => 'varchar',
+        'length' => 10,
+      ),
+      'answeredCorrectly' => array(
+        'description' => 'If the test taker answered this correctly, 1.  If wrong, 0.  If unanswered, NULL.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+      ),           
+      'explanation_if_wrong' => array(
+        'description' => 'If the test taker answers this question incorrectly, display this explanation.',
+        'type' => 'text', //'length' => 255, 'not null' => TRUE, 'default' => '',
+      ),
+      'vid' => array(
+        'description' => 'The current {question_revision}.vid version identifier.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'status' => array(
+        'description' => 
+              'Status is 1 if published, 0 if not published.',
+        'type' => 'int',
+        //'not null' => TRUE, // Review this SKERE
+        'default' => 0,
+      ),
+      'created' => array(
+        'description' => 'The Unix timestamp when the question was created.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+
+    ),
+    'primary key' => array('question_instance_id'),
+  );
+
+  $schema['answer'] = array(
+    'description' => 'The base table for answers.',
+    'fields' => array(
+      'answer_id' => array(
+        'description' => 'The primary identifier for an answer.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'question_id' => array(
+        'description' => 'The foreign key identifier for a question.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'answer_text' => array(
+        'description' => 'The text of this answer.',
+        'type' => 'text',
+        //'length' => 255,
+        //'not null' => TRUE,
+        //'default' => '',
+      ),
+      'is_correct' => array(
+        'description' => 
+              'Is_correct is 1 if is_correct answers the question, 0 if incorrect.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'rationale' => array(
+        'description' => 
+              'The explanation as to why the answer text does or does not answer the question.',
+        'type' => 'text',
+        //'length' => 255,
+        //'not null' => TRUE,
+        //'default' => 0,        
+        ),
+      'vid' => array(
+        'description' => 'The current {answer_revision}.vid version identifier.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'status' => array(
+        'description' => 
+              'Status is 1 if published, 0 if not published.',
+        'type' => 'int',
+        //'not null' => TRUE, // Review this SKERE
+        'default' => 0,
+      ),
+      'created' => array(
+        'description' => 'The Unix timestamp when the answer was created.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'changed' => array(
+        'description' => 'The Unix timestamp when the answer was most recently saved.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+
+    ),
+    'unique keys' => array(
+      'answer_id_vid' => array('answer_id', 'vid'),
+      ),
+    'primary key' => array('answer_id'),
+  );
+
+  $schema['answer_revision'] = array(
+    'description' => 'Stores information about each saved version of an {answer}.',
+    'fields' => array(
+      'answer_id' => array(
+        'description' => 'The {answer} this version belongs to.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'question_id' => array(
+        'description' => 'The foreign key identifier for a question.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'answer_text' => array(
+        'description' => 'The answer text of this version.',
+        'type' => 'text',
+        //'length' => 255,
+        //'not null' => TRUE,
+        //'default' => '',
+      ),
+      'is_correct' => array(
+        'description' => 
+              'Is_correct is 1 if is_correct answers the question, 0 if incorrect.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'rationale' => array(
+        'description' => 
+              'The explanation as to why the answer text does or does not answer the question.',
+        'type' => 'text',
+        //'length' => 255,
+        //'not null' => TRUE,
+        //'default' => 0,
+      ),
+      'vid' => array(
+        'description' => 'The primary identifier for this version.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'status' => array(
+        'description' => 
+              'Status is 1 if published, 0 if not published.',
+        'type' => 'int',
+        //'not null' => TRUE, // Review this SKERE
+        'default' => 0,
+      ),
+      'created' => array(
+        'description' => 'The Unix timestamp when the answer was created.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'indexes' => array(
+      'answer_id' => array('answer_id'),
+    ),
+    'primary key' => array('vid'),
+    'foreign keys' => array(
+      'answer' => array(
+        'table' => 'answer',
+        'columns' => array(
+          'answer_id' => 'answer_id',
+        ),
+      ),
+    ),
+  );
+
+  $schema['answer_instance'] = array(
+    'description' => 'The base table for answer instances.',
+    'fields' => array(
+      'answer_instance_id' => array(
+        'description' => 'The primary identifier for an answer instance.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'question_instance_id' => array(
+        'description' => 'The foreign key identifier for a question instance.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'answer_id' => array(
+        'description' => 'The {answer} this version belongs to.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+     'answer_number' => array(
+        'description' => 'The number of this answer (1, 2, 3, etc.) for this question.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'default' => 0,
+      ),
+     'answer_letter' => array(
+        'description' => 'The letter of this answer (A, B, C, etc.) for this question.',
+        'type' => 'varchar',
+        'length' => 1,
+      ),
+     'answer_text' => array(
+        'description' => 'The text of this answer.',
+        'type' => 'text',
+        //'length' => 255,
+        //'not null' => TRUE,
+        //'default' => '',
+      ),
+      'is_correct' => array(
+        'description' => 
+              'Is_correct is 1 if is_correct answers the question, 0 if incorrect.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'rationale' => array(
+        'description' => 
+              'The explanation as to why the answer text does or does not answer the question.',
+        'type' => 'text',
+        //'length' => 255,
+        //'not null' => TRUE,
+        //'default' => 0,
+      ),
+      'isChosen' => array(
+        'description' => 'If 1, the test taker chose this answer for the question. Otherwise 0.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+      ),
+      'respondedCorrectly' => array(
+        'description' => 'If 1, the test taker responded correctly to this one answer, by either selecting it if it is correct, or not if it is not. Otherwise 0.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+      ),
+      'vid' => array(
+        'description' => 'The primary identifier for this version.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'status' => array(
+        'description' => 
+              'Status is 1 if published, 0 if not published.',
+        'type' => 'int',
+        //'not null' => TRUE, // Review this SKERE
+        'default' => 0,
+      ),
+      'created' => array(
+        'description' => 'The Unix timestamp when the answer was created.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+
+    ),
+    'primary key' => array('answer_instance_id'),
+  );
+  
+  
+ $schema['exam_system_messages'] = array(
+    'description' => 'The table to hold system messages, primarily intended for the developers.',
+    'fields' => array(
+      'esm_id' => array(
+        'description' => 'The primary identifier for a system message.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'esm_message' => array(
+        'description' => 'The message.',
+        'type' => 'text',
+      ),
+      'esm_source' => array(
+        'description' => 
+              'The location in the code from which the message is being generated.',
+        'type' => 'text',
+        //'length' => 255,
+        //'not null' => TRUE,
+        //'default' => 0,
+      ),
+      'created' => array(
+        'description' => 'The Unix timestamp when the answer was created.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+
+    ),
+    'primary key' => array('esm_id'),
+  );
+  
+  
+  return $schema;
+}
